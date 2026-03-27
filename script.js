@@ -243,6 +243,19 @@ class ProjectTracker {
                 else if (!this.confirmModal.classList.contains('hidden')) this.closeConfirmModal();
             }
         });
+
+        // Database export/import events
+        document.getElementById('exportDbBtn').addEventListener('click', () => this.exportDatabase());
+        document.getElementById('importDbBtn').addEventListener('click', () => {
+            document.getElementById('importFileInput').click();
+        });
+        document.getElementById('importFileInput').addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                this.importDatabase(e.target.files[0]);
+                // Reset file input to allow same file to be selected again
+                e.target.value = '';
+            }
+        });
     }
 
     // Project methods
@@ -578,6 +591,55 @@ class ProjectTracker {
     confirmedDelete() {
         // This will be overridden by the specific delete methods
         this.closeConfirmModal();
+    }
+
+    // Database export/import functionality
+    async exportDatabase() {
+        try {
+            const dbBytes = this.db.export();
+            const blob = new Blob([dbBytes], { type: 'application/octet-stream' });
+            const url = URL.createObjectURL(blob);
+
+            // Create a temporary link to trigger download
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `project-tracker-${new Date().toISOString().slice(0,10)}.sqlite`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            // Show success message
+            alert('Database exported successfully!');
+        } catch (error) {
+            console.error('Error exporting database:', error);
+            alert('Failed to export database. Please try again.');
+        }
+    }
+
+    async importDatabase(file) {
+        try {
+            const arrayBuffer = await file.arrayBuffer();
+            const dbBytes = new Uint8Array(arrayBuffer);
+
+            // Test if it's a valid SQLite database by trying to open it
+            const testDb = new SQL.Database(dbBytes);
+
+            // If we get here, it's a valid database - replace current database
+            this.db = new SQL.Database(dbBytes);
+
+            // Reload data from the new database
+            await this.loadFromDatabase();
+
+            // Persist to localStorage as well for consistency
+            await this.saveToDatabase();
+
+            // Show success message
+            alert('Database imported successfully!');
+        } catch (error) {
+            console.error('Error importing database:', error);
+            alert('Failed to import database. Please make sure you selected a valid SQLite file.');
+        }
     }
 }
 

@@ -21,10 +21,11 @@ Personal use - designed for individual project tracking and management.
    - View subtask list within each project
 
 ## Technical Approach
-**Selected Architecture: Direct DOM + SQLite**
+**Selected Architecture: Direct DOM + SQLite with File Import/Export**
 - Vanilla JavaScript with direct DOM manipulation
 - Data persistence using SQLite database via SQL.js WebAssembly library
 - External library: SQL.js (SQLite compiled to WebAssembly) for database functionality
+- Import/Export functionality for sharing data with other applications
 - Modal dialogs for all add/edit interactions
 
 ## User Interface & Interactions

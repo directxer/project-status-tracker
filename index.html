@@ -14,6 +14,16 @@
             <p class="text-gray-600 mt-2">Track your projects and subtasks</p>
         </header>
 
+        <div class="flex justify-center space-x-4 mb-4">
+            <button id="exportDbBtn" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition-colors">
+                <i class="fas fa-download mr-1"></i> Export DB
+            </button>
+            <button id="importDbBtn" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors">
+                <i class="fas fa-upload mr-1"></i> Import DB
+            </button>
+            <input type="file" id="importFileInput" accept=".sqlite" style="display: none;">
+        </div>
+
         <div id="app">
             <!-- Projects will be rendered here -->
         </div>
