@@ -1,0 +1,16 @@
+{
+  "name": "project-status-tracker",
+  "version": "1.0.0",
+  "description": "A lightweight web application for tracking project status with add/remove/edit projects and subtasks",
+  "main": "index.html",
+  "scripts": {
+    "start": "http-server -p 8080",
+    "dev": "http-server -p 8080 -c-1"
+  },
+  "keywords": ["project", "tracker", "todo", "tasks"],
+  "author": "Project Status Tracker",
+  "license": "MIT",
+  "devDependencies": {
+    "http-server": "^14.1.1"
+  }
+}
