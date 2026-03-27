@@ -53,8 +53,20 @@ class ProjectTracker {
                 locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.6.2/${file}`
             });
 
-            // Create new database
-            this.db = new SQL.Database();
+            // Try to load existing database from localStorage
+            const savedDb = localStorage.getItem('projectTrackerSqliteDb');
+            if (savedDb) {
+                try {
+                    const dbBytes = new Uint8Array(JSON.parse(savedDb));
+                    this.db = new SQL.Database(dbBytes);
+                } catch (error) {
+                    console.warn('Failed to load saved database, creating new one:', error);
+                    this.db = new SQL.Database();
+                }
+            } else {
+                // Create new database
+                this.db = new SQL.Database();
+            }
 
             // Create tables if they don't exist
             this.db.run(`
@@ -174,6 +186,11 @@ class ProjectTracker {
 
             projectInsert.free();
             subtaskInsert.free();
+
+            // Persist database to localStorage
+            const dbBytes = this.db.export();
+            const dbJson = JSON.stringify(Array.from(dbBytes));
+            localStorage.setItem('projectTrackerSqliteDb', dbJson);
         } catch (error) {
             console.error('Error saving to database:', error);
             alert('Failed to save data to database.');
@@ -433,10 +450,10 @@ class ProjectTracker {
         const progress = totalSubtasks > 0 ? Math.round((completedSubtasks / totalSubtasks) * 100) : 0;
 
         return `
-            <div class="bg-white rounded-lg shadow-md h-auto hover:shadow-lg transition-shadow">
+            <div class="bg-white rounded-lg shadow-md h-auto hover:shadow-lg transition-shadow w-full">
                 <div class="p-6">
                     <div class="flex justify-between items-start mb-4">
-                        <h3 class="text-xl font-bold text-indigo-600 break-words">${project.name}</h3>
+                        <h3 class="text-xl font-bold text-indigo-600 break-words whitespace-normal">${project.name}</h3>
                         <div class="space-x-3">
                             <button onclick="app.openSubtaskModal('${project.id}')"
                                     class="p-2 bg-indigo-100 text-indigo-600 rounded-full hover:bg-indigo-200 transition-colors">
@@ -453,7 +470,7 @@ class ProjectTracker {
                         </div>
                     </div>
 
-                    ${project.description ? `<p class="text-gray-600 mb-4 line-clamp-2 break-words">${project.description}</p>` : ''}
+                    ${project.description ? `<p class="text-gray-600 mb-4 break-words">${project.description}</p>` : ''}
 
                     <!-- Subtasks Section -->
                     <div class="mb-4">
@@ -497,11 +514,9 @@ class ProjectTracker {
                     onchange="app.toggleSubtask('${projectId}', '${subtask.id}')"
                     class="form-checkbox h-5 w-5 text-indigo-600 border-gray-300 rounded"
                 >
-                <div class="flex-1 ml-3 min-w-0">
-                    <span class="${subtask.completed ? 'line-through text-gray-400' : 'text-gray-800'} break-words">
-                        ${subtask.title}
-                    </span>
-                    ${subtask.description ? `<p class="text-xs text-gray-500 mt-1 line-clamp-1">${subtask.description}</p>` : ''}
+                <div class="flex-1 ml-3 min-w-0 w-full">
+                    <span class="${subtask.completed ? 'line-through text-gray-400' : 'text-gray-800'} break-words">${subtask.title}</span>
+                    ${subtask.description ? `<p class="text-xs text-gray-500 mt-1 line-clamp-1 break-words">${subtask.description}</p>` : ''}
                 </div>
                 <div class="space-x-2">
                     <button onclick="app.editSubtask('${projectId}', '${subtask.id}')"
