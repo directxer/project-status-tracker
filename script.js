@@ -436,7 +436,7 @@ class ProjectTracker {
             <div class="bg-white rounded-lg shadow-md h-auto hover:shadow-lg transition-shadow">
                 <div class="p-6">
                     <div class="flex justify-between items-start mb-4">
-                        <h3 class="text-xl font-bold text-indigo-600">${project.name}</h3>
+                        <h3 class="text-xl font-bold text-indigo-600 break-words">${project.name}</h3>
                         <div class="space-x-3">
                             <button onclick="app.openSubtaskModal('${project.id}')"
                                     class="p-2 bg-indigo-100 text-indigo-600 rounded-full hover:bg-indigo-200 transition-colors">
@@ -453,7 +453,7 @@ class ProjectTracker {
                         </div>
                     </div>
 
-                    ${project.description ? `<p class="text-gray-600 mb-4 line-clamp-2">${project.description}</p>` : ''}
+                    ${project.description ? `<p class="text-gray-600 mb-4 line-clamp-2 break-words">${project.description}</p>` : ''}
 
                     <!-- Subtasks Section -->
                     <div class="mb-4">
@@ -497,8 +497,8 @@ class ProjectTracker {
                     onchange="app.toggleSubtask('${projectId}', '${subtask.id}')"
                     class="form-checkbox h-5 w-5 text-indigo-600 border-gray-300 rounded"
                 >
-                <div class="flex-1 ml-3">
-                    <span class="${subtask.completed ? 'line-through text-gray-400' : 'text-gray-800'}">
+                <div class="flex-1 ml-3 min-w-0">
+                    <span class="${subtask.completed ? 'line-through text-gray-400' : 'text-gray-800'} break-words">
                         ${subtask.title}
                     </span>
                     ${subtask.description ? `<p class="text-xs text-gray-500 mt-1 line-clamp-1">${subtask.description}</p>` : ''}
