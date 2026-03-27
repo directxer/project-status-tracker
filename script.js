@@ -189,11 +189,20 @@ class ProjectTracker {
 
             // Persist database to localStorage
             const dbBytes = this.db.export();
+            if (dbBytes.length === 0) {
+                throw new Error('Database export returned empty array');
+            }
             const dbJson = JSON.stringify(Array.from(dbBytes));
             localStorage.setItem('projectTrackerSqliteDb', dbJson);
+
+            // Verify save worked
+            const saved = localStorage.getItem('projectTrackerSqliteDb');
+            if (!saved) {
+                throw new Error('Failed to save database to localStorage');
+            }
         } catch (error) {
             console.error('Error saving to database:', error);
-            alert('Failed to save data to database.');
+            throw error; // Re-throw for callers to handle
         }
     }
 
@@ -295,18 +304,28 @@ class ProjectTracker {
             this.projects.push(projectData);
         }
 
-        await this.saveToDatabase();
-        this.render();
-        this.closeProjectModal();
+        try {
+            await this.saveToDatabase();
+            this.render();
+            this.closeProjectModal();
+        } catch (error) {
+            console.error('Error saving project:', error);
+            alert('Failed to save project. Please try again.');
+        }
     }
 
     async deleteProject(projectId) {
         this.confirmMessage.textContent = 'Are you sure you want to delete this project? This action cannot be undone.';
         this.confirmDeleteBtn.onclick = async () => {
-            this.projects = this.projects.filter(p => p.id !== projectId);
-            await this.saveToDatabase();
-            this.render();
-            this.closeConfirmModal();
+            try {
+                this.projects = this.projects.filter(p => p.id !== projectId);
+                await this.saveToDatabase();
+                this.render();
+                this.closeConfirmModal();
+            } catch (error) {
+                console.error('Error deleting project:', error);
+                alert('Failed to delete project. Please try again.');
+            }
         };
         this.confirmModal.classList.remove('hidden');
     }
@@ -385,9 +404,14 @@ class ProjectTracker {
                 this.projects[projectIndex].subtasks.push(subtaskData);
             }
 
-            await this.saveToDatabase();
-            this.render();
-            this.closeSubtaskModal();
+            try {
+                await this.saveToDatabase();
+                this.render();
+                this.closeSubtaskModal();
+            } catch (error) {
+                console.error('Error saving subtask:', error);
+                alert('Failed to save subtask. Please try again.');
+            }
         }
     }
 
@@ -396,10 +420,15 @@ class ProjectTracker {
         this.confirmDeleteBtn.onclick = async () => {
             const projectIndex = this.projects.findIndex(p => p.id === projectId);
             if (projectIndex !== -1) {
-                this.projects[projectIndex].subtasks = this.projects[projectIndex].subtasks.filter(st => st.id !== subtaskId);
-                await this.saveToDatabase();
-                this.render();
-                this.closeConfirmModal();
+                try {
+                    this.projects[projectIndex].subtasks = this.projects[projectIndex].subtasks.filter(st => st.id !== subtaskId);
+                    await this.saveToDatabase();
+                    this.render();
+                    this.closeConfirmModal();
+                } catch (error) {
+                    console.error('Error deleting subtask:', error);
+                    alert('Failed to delete subtask. Please try again.');
+                }
             }
         };
         this.confirmModal.classList.remove('hidden');
@@ -410,10 +439,15 @@ class ProjectTracker {
         if (projectIndex !== -1) {
             const subtaskIndex = this.projects[projectIndex].subtasks.findIndex(st => st.id === subtaskId);
             if (subtaskIndex !== -1) {
-                this.projects[projectIndex].subtasks[subtaskIndex].completed = !this.projects[projectIndex].subtasks[subtaskIndex].completed;
-                this.projects[projectIndex].subtasks[subtaskIndex].updatedAt = Date.now();
-                await this.saveToDatabase();
-                this.render();
+                try {
+                    this.projects[projectIndex].subtasks[subtaskIndex].completed = !this.projects[projectIndex].subtasks[subtaskIndex].completed;
+                    this.projects[projectIndex].subtasks[subtaskIndex].updatedAt = Date.now();
+                    await this.saveToDatabase();
+                    this.render();
+                } catch (error) {
+                    console.error('Error toggling subtask:', error);
+                    alert('Failed to update subtask. Please try again.');
+                }
             }
         }
     }
