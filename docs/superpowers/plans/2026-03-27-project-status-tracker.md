@@ -6,6 +6,6 @@
 
 **Architecture:** Direct DOM manipulation with localStorage persistence. The app uses vanilla JavaScript to manage state and update the DOM directly, with data persisted in the browser's localStorage. Features modal dialogs for all add/edit operations and a clean, responsive UI built with Tailwind CSS.
 
-**Tech Stack:** HTML5, CSS3 (Tailwind CSS), Vanilla JavaScript (ES6), localStorage for persistence
+**Tech Stack:** HTML5, CSS3 (Tailwind CSS), Vanilla JavaScript (ES6), SQLite via SQL.js WebAssembly library for persistence
 
 ---

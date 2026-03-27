@@ -2,6 +2,7 @@
 
 class ProjectTracker {
     constructor() {
+        this.db = null;
         this.projects = [];
         this.currentProjectId = null;
         this.currentSubtaskId = null;
@@ -38,30 +39,144 @@ class ProjectTracker {
         this.init();
     }
 
-    init() {
-        this.loadFromLocalStorage();
+    async init() {
+        await this.initDatabase();
+        this.loadFromDatabase();
         this.render();
         this.attachEventListeners();
     }
 
-    loadFromLocalStorage() {
-        const savedData = localStorage.getItem('projectTrackerData');
-        if (savedData) {
-            try {
-                this.projects = JSON.parse(savedData);
-            } catch (error) {
-                console.error('Error parsing localStorage data:', error);
-                this.projects = [];
-            }
+    async initDatabase() {
+        try {
+            // Load SQL.js
+            const SQL = await initSqlJs({
+                locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.6.2/${file}`
+            });
+
+            // Create new database
+            this.db = new SQL.Database();
+
+            // Create tables if they don't exist
+            this.db.run(`
+                CREATE TABLE IF NOT EXISTS projects (
+                    id TEXT PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    description TEXT,
+                    created_at INTEGER,
+                    updated_at INTEGER
+                )
+            `);
+
+            this.db.run(`
+                CREATE TABLE IF NOT EXISTS subtasks (
+                    id TEXT PRIMARY KEY,
+                    project_id TEXT,
+                    title TEXT NOT NULL,
+                    description TEXT,
+                    completed BOOLEAN DEFAULT 0,
+                    created_at INTEGER,
+                    updated_at INTEGER,
+                    FOREIGN KEY (project_id) REFERENCES projects(id)
+                )
+            `);
+        } catch (error) {
+            console.error('Error initializing database:', error);
+            alert('Failed to initialize database. Please check your connection.');
         }
     }
 
-    saveToLocalStorage() {
+    async loadFromDatabase() {
         try {
-            localStorage.setItem('projectTrackerData', JSON.stringify(this.projects));
+            // Load projects
+            const projectStmt = this.db.prepare("SELECT * FROM projects ORDER BY created_at DESC");
+            const projects = [];
+            while (projectStmt.step()) {
+                const row = projectStmt.getAsObject();
+                projects.push({
+                    id: row.id,
+                    name: row.name,
+                    description: row.description,
+                    createdAt: row.created_at,
+                    updatedAt: row.updated_at,
+                    subtasks: [] // Will be populated below
+                });
+            }
+            projectStmt.free();
+
+            // Load subtasks for each project
+            for (const project of projects) {
+                const subtaskStmt = this.db.prepare("SELECT * FROM subtasks WHERE project_id = ? ORDER BY created_at");
+                subtaskStmt.bind([project.id]);
+                const subtasks = [];
+                while (subtaskStmt.step()) {
+                    const row = subtaskStmt.getAsObject();
+                    subtasks.push({
+                        id: row.id,
+                        title: row.title,
+                        description: row.description,
+                        completed: Boolean(row.completed),
+                        createdAt: row.created_at,
+                        updatedAt: row.updated_at
+                    });
+                }
+                subtaskStmt.free();
+                project.subtasks = subtasks;
+            }
+
+            this.projects = projects;
         } catch (error) {
-            console.error('Error saving to localStorage:', error);
-            alert('Unable to save data. Local storage may be full.');
+            console.error('Error loading from database:', error);
+            this.projects = [];
+        }
+    }
+
+    async saveToDatabase() {
+        try {
+            // Clear existing data
+            this.db.run("DELETE FROM subtasks");
+            this.db.run("DELETE FROM projects");
+
+            // Save projects
+            const projectInsert = this.db.prepare(`
+                INSERT INTO projects (id, name, description, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?)
+            `);
+
+            // Save subtasks
+            const subtaskInsert = this.db.prepare(`
+                INSERT INTO subtasks (id, project_id, title, description, completed, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            `);
+
+            for (const project of this.projects) {
+                // Insert project
+                projectInsert.run([
+                    project.id,
+                    project.name,
+                    project.description,
+                    project.createdAt,
+                    project.updatedAt
+                ]);
+
+                // Insert subtasks
+                for (const subtask of project.subtasks) {
+                    subtaskInsert.run([
+                        subtask.id,
+                        project.id,
+                        subtask.title,
+                        subtask.description,
+                        subtask.completed ? 1 : 0,
+                        subtask.createdAt,
+                        subtask.updatedAt
+                    ]);
+                }
+            }
+
+            projectInsert.free();
+            subtaskInsert.free();
+        } catch (error) {
+            console.error('Error saving to database:', error);
+            alert('Failed to save data to database.');
         }
     }
 
@@ -132,7 +247,7 @@ class ProjectTracker {
         this.currentProjectId = null;
     }
 
-    saveProject() {
+    async saveProject() {
         const name = this.projectNameInput.value.trim();
         const description = this.projectDescriptionInput.value.trim();
 
@@ -163,16 +278,16 @@ class ProjectTracker {
             this.projects.push(projectData);
         }
 
-        this.saveToLocalStorage();
+        await this.saveToDatabase();
         this.render();
         this.closeProjectModal();
     }
 
-    deleteProject(projectId) {
+    async deleteProject(projectId) {
         this.confirmMessage.textContent = 'Are you sure you want to delete this project? This action cannot be undone.';
-        this.confirmDeleteBtn.onclick = () => {
+        this.confirmDeleteBtn.onclick = async () => {
             this.projects = this.projects.filter(p => p.id !== projectId);
-            this.saveToLocalStorage();
+            await this.saveToDatabase();
             this.render();
             this.closeConfirmModal();
         };
@@ -217,7 +332,7 @@ class ProjectTracker {
         this.confirmDeleteBtn.onclick = null;
     }
 
-    saveSubtask() {
+    async saveSubtask() {
         const title = this.subtaskTitleInput.value.trim();
         const description = this.subtaskDescriptionInput.value.trim();
 
@@ -253,19 +368,19 @@ class ProjectTracker {
                 this.projects[projectIndex].subtasks.push(subtaskData);
             }
 
-            this.saveToLocalStorage();
+            await this.saveToDatabase();
             this.render();
             this.closeSubtaskModal();
         }
     }
 
-    deleteSubtask(projectId, subtaskId) {
+    async deleteSubtask(projectId, subtaskId) {
         this.confirmMessage.textContent = 'Are you sure you want to delete this subtask? This action cannot be undone.';
-        this.confirmDeleteBtn.onclick = () => {
+        this.confirmDeleteBtn.onclick = async () => {
             const projectIndex = this.projects.findIndex(p => p.id === projectId);
             if (projectIndex !== -1) {
                 this.projects[projectIndex].subtasks = this.projects[projectIndex].subtasks.filter(st => st.id !== subtaskId);
-                this.saveToLocalStorage();
+                await this.saveToDatabase();
                 this.render();
                 this.closeConfirmModal();
             }
@@ -273,14 +388,14 @@ class ProjectTracker {
         this.confirmModal.classList.remove('hidden');
     }
 
-    toggleSubtask(projectId, subtaskId) {
+    async toggleSubtask(projectId, subtaskId) {
         const projectIndex = this.projects.findIndex(p => p.id === projectId);
         if (projectIndex !== -1) {
             const subtaskIndex = this.projects[projectIndex].subtasks.findIndex(st => st.id === subtaskId);
             if (subtaskIndex !== -1) {
                 this.projects[projectIndex].subtasks[subtaskIndex].completed = !this.projects[projectIndex].subtasks[subtaskIndex].completed;
                 this.projects[projectIndex].subtasks[subtaskIndex].updatedAt = Date.now();
-                this.saveToLocalStorage();
+                await this.saveToDatabase();
                 this.render();
             }
         }

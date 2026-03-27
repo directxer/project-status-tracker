@@ -1,6 +1,6 @@
 {
   "name": "project-status-tracker",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A lightweight web application for tracking project status with add/remove/edit projects and subtasks",
   "main": "index.html",
   "scripts": {

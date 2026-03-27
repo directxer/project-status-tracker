@@ -21,10 +21,10 @@ Personal use - designed for individual project tracking and management.
    - View subtask list within each project
 
 ## Technical Approach
-**Selected Architecture: Direct DOM + localStorage**
+**Selected Architecture: Direct DOM + SQLite**
 - Vanilla JavaScript with direct DOM manipulation
-- Data persistence using browser's localStorage
-- No external frameworks or libraries (beyond Tailwind CSS)
+- Data persistence using SQLite database via SQL.js WebAssembly library
+- External library: SQL.js (SQLite compiled to WebAssembly) for database functionality
 - Modal dialogs for all add/edit interactions
 
 ## User Interface & Interactions
